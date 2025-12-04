@@ -51,7 +51,8 @@ label{display:block;margin:10px 0 6px 0;font-weight:600;color:#0f1724}
 .score-input{width:100%;padding:8px 4px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);font-size:16px;text-align:center}
 .list{display:flex;flex-direction:column;gap:8px}
 .add-row{display:flex;gap:8px;margin-top:10px}
-.small{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--pill);border:0}
+.small{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--pill);border:0;-webkit-appearance:none;appearance:none;cursor:pointer}
+
 
 #roundSelect {
   /* Inherit height/look from .small */
@@ -123,7 +124,7 @@ label{display:block;margin:10px 0 6px 0;font-weight:600;color:#0f1724}
 .modal{width:92%;max-width:560px;background:var(--card);padding:14px;border-radius:12px;box-shadow:0 20px 50px rgba(9,10,11,0.18)}
 .row-grid{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
 .pills{display:flex;gap:8px;align-items:center}
-.delete-confirm{background:#ff3b30;color:white;padding:8px 12px;border-radius:8px;border:0;font-weight:700}
+.delete-confirm{background:var(--accent-2);color:white;padding:8px 12px;border-radius:8px;border:0;font-weight:700}
 
 /* swipe hidden delete is removed - we use modal instead */
 .swipe-wrap{position:relative;border-radius:10px;background:transparent}
