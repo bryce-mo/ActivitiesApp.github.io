@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Scorekeeper — PWA</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff">
+
+<style>
+:root{
+  --bg: #f8f9fb;
+  --card: #ffffff;
+  --muted: #6b7280;
+  --accent: #003493;
+  --accent-2: #EA0063;
+  --radius: 14px;
+  --pill: rgba(0,0,0,0.05);
+  --shadow: 0 8px 26px rgba(7,11,23,0.08);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color-scheme: light;
+}
+html,body{height:100%;margin:0;background:linear-gradient(#f8f9fb,#f3f6fa);-webkit-font-smoothing:antialiased;}
+.app{max-width:820px;margin:18px auto;padding:14px;box-sizing:border-box;}
+header.top-pill{
+  position:fixed;left:50%;transform:translateX(-50%);top:12px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.97), rgba(255,255,255,0.92));
+  padding:8px 12px;border-radius:28px;display:flex;gap:8px;align-items:center;
+  box-shadow:var(--shadow);z-index:600;border:1px solid rgba(0,0,0,0.04);
+}
+.icon-btn{width:42px;height:42px;border-radius:10px;background:transparent;border:0;display:grid;place-items:center;font-size:18px;color:var(--accent);cursor:pointer}
+.icon-btn.secondary{color:var(--accent-2)}
+h1{font-size:20px;margin:10px 0 6px 0;color:#0f1724}
+.card{background:var(--card);border-radius:var(--radius);padding:14px;margin:12px 0;box-shadow:var(--shadow);border:1px solid rgba(0,0,0,0.03)}
+.home-actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{background:var(--accent);color:white;padding:10px 14px;border-radius:8px;border:0;cursor:pointer;font-weight:600}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(0,52,147,0.12)}
+.muted{color:var(--muted);font-size:14px}
+textarea {width:100%;min-height:120px;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);resize:vertical;font-size:15px}
+input[type="text"], input[type="number"]{padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);font-size:15px}
+label{display:block;margin:10px 0 6px 0;font-weight:600;color:#0f1724}
+
+/* Scoresheet list */
+.row{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;}
+.row:not(.active){opacity:0.62}
+.left{flex:1}
+.name{font-weight:700;font-size:16px;color:#081227}
+.subtitle{font-size:13px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:auto}
+.right{width:120px}
+.score-input{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);font-size:15px;text-align:center}
+.list{display:flex;flex-direction:column;gap:8px}
+.add-row{display:flex;gap:8px;margin-top:10px}
+.small{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--pill);border:0}
+
+#roundSelect {
+  /* Inherit height/look from .small */
+  font-size: 13px;
+  padding: 8px 10px 8px 30px; /* **Crucial:** Increased LEFT padding (30px) to move text away from the icon */
+  border-radius: 8px;
+  background: var(--pill);
+  border: 0;
+
+  /* Additional adjustments for select consistency */
+  -webkit-appearance: none; /* Removes default iOS/Safari styling */
+  -moz-appearance: none;    /* Removes default Firefox styling */
+  appearance: none;         /* Removes default OS styling */
+  
+  /* Add a custom arrow if desired (optional, but improves consistency) */
+  /* background-image: url("data:image/svg+xml;..."); */
+
+  /* Ensure text color is readable, matching input fields */
+  color: #0f1724; 
+  cursor: pointer;
+}
+
+/* Optional: Style the element when focused */
+#roundSelect:focus {
+  outline: none; /* Remove default browser outline */
+  box-shadow: 0 0 0 2px var(--accent); /* Add a custom focus ring */
+}
+
+/* New style for the wrapper */
+.dropdown-wrapper {
+  position: relative; /* Crucial for absolute positioning of the icon */
+  display: inline-block; /* Wraps tightly around the select box */
+}
+
+/* Style the icon (chevron) */
+.dropdown-wrapper::before {
+  /* Using your SVG encoded as a Data URI */
+  /* The SVG is color: currentColor and stroke-width: 2.5 for better visibility */
+  content: ''; 
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' class='feather feather-chevron-down'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-size: 16px 16px; /* Adjust size to fit nicely */
+  background-repeat: no-repeat;
+  
+  /* Positioning and layout */
+  position: absolute;
+  top: 50%; /* Center vertically */
+  left: 8px; /* Slightly adjust left position */
+  width: 16px; /* Width of the icon container */
+  height: 16px; /* Height of the icon container */
+  transform: translateY(-50%); /* Fine-tune vertical centering */
+  
+  /* Ensure icon is clickable but doesn't interfere with the dropdown's click target */
+  pointer-events: none; 
+  z-index: 2; /* Ensure it's above the select box */
+  
+  /* The color is set via 'currentColor' in the SVG, which will inherit from the wrapper's text color.
+     Since the wrapper usually doesn't have an explicit color, we'll rely on the select's text color.
+     You may want to set a specific color property here if the icon doesn't show up. */
+}
+
+
+.leaderboard table{width:100%;border-collapse:collapse}
+.leaderboard th, .leaderboard td{padding:8px;border-bottom:1px solid rgba(0,0,0,0.04);text-align:left;font-size:14px}
+.leaderboard th{font-weight:700;color:#0f1724}
+.leaderboard td.numeric{text-align:right;font-variant-numeric:tabular-nums}
+
+/* modal */
+.modal-backdrop{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.25);display:grid;place-items:center;z-index:800}
+.modal{width:92%;max-width:560px;background:var(--card);padding:14px;border-radius:12px;box-shadow:0 20px 50px rgba(9,10,11,0.18)}
+.row-grid{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.pills{display:flex;gap:8px;align-items:center}
+.delete-confirm{background:#ff3b30;color:white;padding:8px 12px;border-radius:8px;border:0;font-weight:700}
+
+/* swipe hidden delete is removed - we use modal instead */
+.swipe-wrap{position:relative;border-radius:10px;background:transparent}
+
+/* responsive */
+@media (max-width:520px){
+  .right{width:90px}
+  .icon-btn{width:36px;height:36px}
+}
+.round-pill{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,0.03);font-size:13px;margin-left:8px}
+.top-controls{display:flex;gap:8px;align-items:center}
+.rounds-control{display:flex;gap:6px;align-items:center}
+.title-row{display:flex;align-items:flex-end;gap:8px;justify-content:space-between}
+.title-left{display:flex;align-items:flex-end;gap:10px}
+.rename-icon{cursor:pointer;border-radius:8px;padding:0 6px;margin: 0;}
+.rename-icon:hover{background:var(--pill)}
+.footer-space{height:90px}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top-pill" aria-hidden="true">
+    <button class="icon-btn" id="homeBtn" title="Home">🏠</button>
+    <button class="icon-btn" id="secondBtn" title="Secondary">📁</button>
+  </header>
+
+  <main id="main"></main>
+
+  <div class="footer-space"></div>
+</div>
+
+<!-- modal container -->
+<div id="modalRoot" style="display:none;"></div>
+
+<script>
+/* ============================
+   IndexedDB wrapper
+   ============================ */
+const DB_NAME = 'scorekeeper-db';
+const DB_VER = 1;
+const STORE = 'sheets';
+
+function openDb(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE, { keyPath: 'id' });
+      }
+    };
+    r.onsuccess = e => res(e.target.result);
+    r.onerror = e => rej(e.target.error);
+  });
+}
+async function dbGetAll(){ const db = await openDb(); return new Promise((res,rej)=>{ const tx = db.transaction(STORE,'readonly'); const st = tx.objectStore(STORE); const req = st.getAll(); req.onsuccess = ()=>res(req.result); req.onerror = ()=>rej(req.error); }); }
+async function dbGet(id){ const db = await openDb(); return new Promise((res,rej)=>{ const tx = db.transaction(STORE,'readonly'); const st = tx.objectStore(STORE); const req = st.get(id); req.onsuccess = ()=>res(req.result); req.onerror = ()=>rej(req.error); }); }
+async function dbPut(obj){ const db = await openDb(); return new Promise((res,rej)=>{ const tx = db.transaction(STORE,'readwrite'); const st = tx.objectStore(STORE); const req = st.put(obj); req.onsuccess = ()=>res(req.result); req.onerror = ()=>rej(req.error); }); }
+async function dbDel(id){ const db = await openDb(); return new Promise((res,rej)=>{ const tx = db.transaction(STORE,'readwrite'); const st = tx.objectStore(STORE); const req = st.delete(id); req.onsuccess = ()=>res(); req.onerror = ()=>rej(req.error); }); }
+
+/* ============================
+   Utilities
+   ============================ */
+function uid(prefix='id'){ return prefix+'-'+Math.random().toString(36).slice(2,10); }
+function now(){ return Date.now(); }
+function clampNumberString(s){
+  if (s === '' || s === null || s === undefined) return null;
+  s = String(s).trim();
+  if (/^[-+]?\d*\.?\d+$/.test(s)) return Number(s);
+  return null;
+}
+function escapeHTML(s){
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"}[c]));
+}
+
+/* ============================
+   App state & routing
+   ============================ */
+let STATE = { route: 'home', sheetId: null, sheets: [], archived: [] };
+const main = document.getElementById('main');
+const modalRoot = document.getElementById('modalRoot');
+
+async function loadState(){
+  const all = await dbGetAll();
+  STATE.sheets = all.filter(s => !s.archived).sort((a,b)=>b.updatedAt - a.updatedAt);
+  STATE.archived = all.filter(s => s.archived).sort((a,b)=>b.updatedAt - a.updatedAt);
+}
+
+function navigateTo(route){
+  location.hash = '#'+route;
+}
+
+window.addEventListener('hashchange', renderRoute);
+
+/* ============================
+   Routing & render
+   ============================ */
+async function renderRoute(){
+  await loadState();
+  const hash = location.hash.replace('#','');
+  if (!hash || hash === 'home'){ STATE.route = 'home'; STATE.sheetId = null; renderHome(); return; }
+  if (hash.startsWith('new')) { STATE.route = 'new'; renderNew(); return; }
+  if (hash.startsWith('sheet/')) {
+    STATE.route = 'sheet';
+    STATE.sheetId = hash.split('/')[1];
+    await renderSheet(STATE.sheetId);
+    return;
+  }
+  if (hash.startsWith('archive')) { STATE.route = 'archive'; renderArchive(); return; }
+  if (hash.startsWith('leaderboard')) {
+    STATE.route = 'leader';
+    STATE.sheetId = hash.split('/')[1];
+    await renderLeader();
+    return;
+  }
+  // fallback
+  STATE.route = 'home'; renderHome();
+}
+
+/* ============================
+   Home view
+   ============================ */
+function renderHome(){
+  // top pill second button -> Archive (show)
+  const secondBtn = document.getElementById('secondBtn');
+  secondBtn.style.display = ''; secondBtn.title = 'Archived Sheets';
+  secondBtn.innerText = '🗄️';
+  secondBtn.onclick = ()=> navigateTo('archive');
+
+  main.innerHTML = '';
+  const el = elt('div',{class:'card'}, [
+    elt('div',{}, [ elt('h1',{}, 'Scorekeeper'), elt('div',{class:'muted'}, 'Create and manage multiple active scoresheets. Works offline once installed.') ]),
+    elt('div',{class:'home-actions', style:'margin-top:12px'}, [
+      elt('button',{class:'btn', onclick:()=> navigateTo('new')}, 'New Scoresheet')
+    ])
+  ]);
+  main.appendChild(el);
+
+  const activeCard = elt('div',{class:'card'}, [
+    elt('div',{style:'display:flex;justify-content:space-between;align-items:center'}, [
+      elt('div',{}, [ elt('div',{style:'font-weight:700'}, 'Active Scoresheets'), elt('div',{class:'muted'}, `${STATE.sheets.length} active`) ])
+    ]),
+    elt('div',{id:'activeList', style:'margin-top:10px'})
+  ]);
+  main.appendChild(activeCard);
+
+  renderActiveList();
+}
+
+function renderActiveList(){
+  const container = document.getElementById('activeList');
+  container.innerHTML = '';
+  if (!STATE.sheets.length) {
+    container.appendChild(elt('div',{class:'muted'}, 'No active scoresheets yet.'));
+    return;
+  }
+  STATE.sheets.forEach(s=>{
+    const row = elt('div',{class:'card', style:'display:flex;justify-content:space-between;align-items:center'}, [
+      elt('div',{}, [
+        elt('div',{style:'font-weight:700'}, escapeHTML(s.title || 'Untitled')),
+        elt('div',{class:'muted', style:'font-size:13px;'}, new Date(s.createdAt).toLocaleString())
+      ]),
+      elt('div',{}, [
+      elt('button',{class:'btn ghost', style:'color: var(--accent-2)', onclick:()=> archiveSheet(s.id)}, 'Archive'),
+      elt('button',{class:'btn', style:'margin-left:8px;', onclick:()=> navigateTo('sheet/'+s.id)}, 'Open')
+      ])
+    ]);
+    container.appendChild(row);
+  });
+}
+
+/* archive and restore */
+async function archiveSheet(id){
+  const s = await dbGet(id);
+  if (!s) return alert('Not found');
+  s.archived = true;
+  s.updatedAt = now();
+  await dbPut(s);
+  await loadState();
+  renderRoute();
+}
+async function restoreSheet(id){
+  const s = await dbGet(id);
+  if (!s) return alert('Not found');
+  s.archived = false;
+  s.updatedAt = now();
+  await dbPut(s);
+  await loadState();
+  navigateTo('home');
+}
+async function deleteArchivedSheet(id){
+  await dbDel(id);
+  await loadState();
+  renderRoute();
+}
+
+/* ============================
+   Archive view
+   ============================ */
+function renderArchive(){
+  // top pill: only Home visible (hide secondBtn)
+  const secondBtn = document.getElementById('secondBtn');
+  secondBtn.style.display = 'none';
+
+  main.innerHTML = '';
+  main.appendChild(elt('div',{class:'card'}, [ elt('h1',{}, 'Archived Scoresheets'), elt('div',{class:'muted'}, 'Archived sheets are read-only. Restore to make edits.') ]));
+
+  const list = elt('div',{class:'card'}, [ elt('div',{id:'archList'}) ]);
+  main.appendChild(list);
+  const container = document.getElementById('archList');
+  container.innerHTML = '';
+  if (!STATE.archived.length) container.appendChild(elt('div',{class:'muted'}, 'No archived sheets.'));
+  STATE.archived.forEach(s=>{
+    const row = elt('div',{class:'card', style:'display:flex;justify-content:space-between;align-items:center'}, [
+      elt('div',{}, [
+        elt('div',{style:'font-weight:700'}, escapeHTML(s.title || 'Untitled')),
+        elt('div',{class:'muted', style:'font-size:13px;'}, new Date(s.updatedAt || s.createdAt).toLocaleString())
+      ]),
+      elt('div',{}, [
+        elt('button',{class:'btn ghost', onclick:()=> restoreSheet(s.id)}, 'Restore'),
+        // inline confirm delete: first click toggles text to 'Confirm?'
+        elt('button',{class:'btn', style:'margin-left:8px', 'data-confirm':'no', onclick:(e)=> handleArchiveDeleteClick(e,s.id)}, 'Delete')
+      ])
+    ]);
+    container.appendChild(row);
+  });
+  const DB_NAME = 'scorekeeper-db'; // Your existing constant
+
+main.appendChild(elt('div', { class: 'card' }, [
+  elt('div', { style: 'display: flex; justify-content: space-between; align-items: center;' }, [
+    elt('h1', {}, 'Reset Memory & Cache'),
+    elt('button', {
+      class: 'btn ghost',
+      style: 'color: var(--accent-2);',
+      onclick: () => {
+        if (confirm('⚠️ Are you sure you want to reset EVERYTHING? This will clear all scores, settings, local memory, and caches.')) {
+          
+          // --- 1. CLEAR BROWSER STORAGE (localStorage & sessionStorage) ---
+          localStorage.clear();
+          sessionStorage.clear();
+          console.log('Local and session storage cleared.');
+
+          // --- 2. CLEAR INDEXEDDB ---
+          const dbDeleteRequest = indexedDB.deleteDatabase(DB_NAME);
+
+          dbDeleteRequest.onsuccess = () => {
+            console.log(`IndexedDB database '${DB_NAME}' cleared successfully.`);
+            triggerServiceWorkerCacheClear();
+          };
+
+          dbDeleteRequest.onerror = (event) => {
+            console.error('Error clearing IndexedDB:', event.target.error);
+            // Continue to clear cache even if DB clear fails
+            triggerServiceWorkerCacheClear();
+          };
+
+          // Handle the case where the database is open by another connection
+          dbDeleteRequest.onblocked = () => {
+             console.warn('IndexedDB deletion blocked. Close all open connections to the database and try again.');
+             alert('Could not fully clear data. Please close any other tabs using this app and try again.');
+          };
+          
+          function triggerServiceWorkerCacheClear() {
+            // --- 3. CLEAR CACHE VIA SERVICE WORKER & RELOAD ---
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'CLEAR_ALL_CACHES'
+              });
+              
+              // Wait for the Service Worker to process the cache clear, then force a hard reload
+              setTimeout(() => {
+                console.log('Caches cleared via Service Worker. Reloading...');
+                window.location.reload(true); 
+              }, 500);
+            } else {
+              console.log('No active Service Worker. Reloading...');
+              window.location.reload(true);
+            }
+          }
+        } // end if(confirm)
+      }
+    }, 'Reset')
+  ])
+]));
+}
+function handleArchiveDeleteClick(e,id){
+  const btn = e.currentTarget;
+  if (btn.dataset.confirm === 'no'){
+    btn.dataset.confirm = 'yes'; btn.innerText = 'Confirm?';
+    setTimeout(()=>{ if (btn) { btn.dataset.confirm = 'no'; btn.innerText = 'Delete'; } }, 3000);
+  } else {
+    // confirmed
+    deleteArchivedSheet(id);
+  }
+}
+
+/* ============================
+   New sheet view
+   ============================ */
+function renderNew(){
+  // second button -> Home
+  const secondBtn = document.getElementById('secondBtn');
+  secondBtn.style.display = 'none';
+
+  main.innerHTML = '';
+  const el = elt('div',{class:'card'}, [
+    elt('h1',{}, 'New Scoresheet'),
+    elt('label',{}, 'Title'),
+    elt('input',{type:'text', id:'sheetTitle', placeholder:'Name this scoresheet (optional)'}),
+    elt('label',{}, 'Names (one per line)'),
+    elt('textarea',{id:'namesInput', placeholder:'Bryce\nAlice\nSam'}),
+    elt('div',{style:'display:flex;gap:8px;margin-top:10px;align-items:center'}, [
+      elt('button',{class:'btn', onclick:startNewSheet}, 'Start Scoring'),
+      elt('button',{class:'btn ghost', onclick:()=> navigateTo('home')}, 'Cancel')
+    ])
+  ]);
+  main.appendChild(el);
+  document.getElementById('sheetTitle').focus();
+}
+async function startNewSheet(){
+  const t = document.getElementById('sheetTitle').value.trim() || 'Untitled';
+  const namesRaw = document.getElementById('namesInput').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if (!namesRaw.length) return alert('Add at least one name.');
+  const initialRounds = 1;
+  const sheet = {
+    id: uid('sheet'),
+    title: t,
+    createdAt: now(),
+    updatedAt: now(),
+    archived: false,
+    currentRoundIndex: 0, // 0-based
+    contestants: namesRaw.map(n=>({ id: uid('c'), name: n, scores: Array(initialRounds).fill(null) }))
+  };
+  await dbPut(sheet);
+  navigateTo('sheet/'+sheet.id);
+  await loadState();
+}
+
+/* ============================
+   Sheet (scoring) view
+   ============================ */
+let sheetCache = null;
+let saveTimer = null;
+let activeContestantIndex = 0;
+let selectedRound = 0;
+
+async function renderSheet(id){
+  // top pill second button -> leaderboard (show)
+  const secondBtn = document.getElementById('secondBtn');
+  secondBtn.style.display = ''; secondBtn.title = 'Leaderboard';
+  secondBtn.innerText = '📊';
+  secondBtn.onclick = ()=> navigateTo('leaderboard/' + id);
+
+  sheetCache = await dbGet(id);
+  if (!sheetCache) { alert('Sheet not found'); navigateTo('home'); return; }
+  if (sheetCache.archived) { alert('This sheet is archived and read-only. Restore to edit.'); navigateTo('home'); return; }
+
+  // ensure minimal structure
+  sheetCache.contestants = sheetCache.contestants || [];
+  if (sheetCache.contestants.length === 0) sheetCache.contestants.push({ id: uid('c'), name: 'Contestant', scores: [null] });
+  // ensure all contestants have same scores length
+  const roundsLen = sheetCache.contestants[0].scores.length || 1;
+  sheetCache.contestants.forEach(c => { if (!c.scores) c.scores = Array(roundsLen).fill(null); while (c.scores.length < roundsLen) c.scores.push(null); });
+
+  if (typeof sheetCache.currentRoundIndex !== 'number') sheetCache.currentRoundIndex = 0;
+  selectedRound = sheetCache.currentRoundIndex;
+
+  activeContestantIndex = 0;
+  main.innerHTML = '';
+
+  // header layout per spec:
+  // Line 1: Name & rename pencil (left)  ----  Right: Round dropdown, Add Round
+  // Line 2: Contestants: # (left)  ----  Right: Latest, Delete Round, Archive
+  const line1 = elt('div',{class:'title-row'}, [
+    elt('div',{class:'title-left'}, [
+      elt('div',{}, elt('h1',{class:'rename-icon',onclick:renameSheet}, escapeHTML(sheetCache.title))),
+    ]),
+    elt('div',{style:'display:flex;align-items:center;gap:8px'}, [
+      renderRoundDropdown(),
+      elt('button',{class:'small', onclick:addRound}, 'New Round'),
+      elt('button',{class:'btn', style:'font-size: 20px; padding: 4.5px 9px', onclick:jumpToLatest}, '⇥'),
+    ])
+  ]);
+
+  const line2 = elt('div',{style:'display:flex;justify-content:space-between;align-items:top;margin-top:8px'}, [
+    elt('div',{style:'margin-left:5px'}, elt('div',{class:'muted'}, `Contestants: ${sheetCache.contestants.length}`)),
+    elt('div',{}, [
+      elt('button',{class:'btn ghost', style:'margin-left:6px;color: var(--accent)', onclick:deleteRound}, 'Delete Round'),
+      elt('button',{class:'btn ghost', style:'margin-left:8px;color: var(--accent-2)', onclick:()=> archiveCurrentSheet(sheetCache.id)}, 'Archive Sheet')
+    ])
+  ]);
+
+  main.appendChild(elt('div',{class:'card'}, [ line1, line2 ]));
+
+  // list & controls
+  const listCard = elt('div',{class:'card'}, [ elt('div',{id:'listContainer', class:'list'}) ]);
+  main.appendChild(listCard);
+
+  const bottomBar = elt('div',{style:'margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px'}, [
+    elt('div',{}, [
+      elt('button',{class:'small', onclick:()=> showAddContestantInline()}, '+ Add Contestant')
+    ]),
+    elt('div',{}, [
+      elt('button',{class:'btn ghost', onclick:()=> navigateTo('home')}, 'Back to Home')
+    ])
+  ]);
+  main.appendChild(bottomBar);
+
+  renderContestantList();
+  document.getElementById('homeBtn').onclick = ()=> navigateTo('home');
+  document.getElementById('secondBtn').onclick = ()=> navigateTo('leaderboard/' + sheetCache.id);
+}
+
+/* round dropdown renderer */
+function renderRoundDropdown(){
+  // 1. Create the <select> element (your existing code)
+  const sel = document.createElement('select');
+  sel.id = 'roundSelect';
+  const rounds = sheetCache.contestants[0]?.scores?.length || 1;
+  for (let i=0;i<rounds;i++){
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `Round ${i+1}`;
+    if (i === selectedRound) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener('change', (e)=>{
+    selectedRound = Number(e.target.value);
+    renderContestantList();
+  });
+  
+  // 2. Create and append to the wrapper
+  const wrapper = document.createElement('div');
+  wrapper.className = 'dropdown-wrapper';
+  wrapper.appendChild(sel);
+  
+  // Return the wrapper, which includes the dropdown and the icon from CSS
+  return wrapper;
+}
+
+/* helper to update dropdown options and selection after rounds change */
+function updateRoundDropdown(){
+  const sel = document.getElementById('roundSelect');
+  if (!sel) return;
+  sel.innerHTML = '';
+  const rounds = sheetCache.contestants[0]?.scores?.length || 1;
+  for (let i=0;i<rounds;i++){
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `Round ${i+1}`;
+    if (i === selectedRound) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+/* archive sheet */
+async function archiveCurrentSheet(id){
+  if (!confirm('Archive this sheet? You can restore it later.')) return;
+  const s = await dbGet(id);
+  s.archived = true; s.updatedAt = now();
+  await dbPut(s);
+  await loadState();
+  navigateTo('home');
+}
+
+/* rename sheet */
+function renameSheet(){
+  const newName = prompt('Rename sheet', sheetCache.title);
+  if (newName === null) return;
+  sheetCache.title = newName.trim() || sheetCache.title;
+  sheetCache.updatedAt = now();
+  dbPut(sheetCache);
+  renderSheet(sheetCache.id);
+}
+
+/* render contestants */
+function renderContestantList(){
+  const container = document.getElementById('listContainer');
+  container.innerHTML = '';
+  sheetCache.contestants.forEach((c, idx) => {
+    const subtitleHtml = buildSubtitleSafe(c.scores, selectedRound);
+    const rowWrap = document.createElement('div');
+    rowWrap.className = 'swipe-wrap';
+    const row = document.createElement('div');
+    row.className = 'row' + (idx === activeContestantIndex ? ' active' : '');
+    // left
+    const left = document.createElement('div'); left.className = 'left';
+    const nameEl = document.createElement('div'); nameEl.className = 'name'; nameEl.textContent = c.name;
+    const subEl = document.createElement('div'); subEl.className = 'subtitle'; subEl.style.marginTop = '6px';
+    // subtitle contains HTML (strong tags)
+    subEl.innerHTML = subtitleHtml;
+    left.appendChild(nameEl); left.appendChild(subEl);
+    left.addEventListener('click', ()=> openContestantModal(idx));
+    // right
+    const right = document.createElement('div'); right.className = 'right';
+    const input = document.createElement('input');
+    input.className = 'score-input';
+    input.value = valueOrEmpty(c.scores[selectedRound]);
+    input.setAttribute('data-idx', String(idx));
+    input.setAttribute('data-round', String(selectedRound));
+    input.setAttribute('inputmode', 'decimal');
+    input.placeholder = '—';
+    input.addEventListener('keydown', onScoreKeyDown);
+    input.addEventListener('input', onScoreInput);
+    right.appendChild(input);
+    // assemble
+    row.appendChild(left); row.appendChild(right);
+    rowWrap.appendChild(row);
+    container.appendChild(rowWrap);
+  });
+}
+
+/* subtitle builder that returns HTML string (escape contents, wrap active with <strong>) */
+function buildSubtitleSafe(scores, activeIdx){
+  const parts = scores.map((s,i)=> {
+    const display = (s === null || s === undefined) ? '—' : String(s);
+    if (i === activeIdx) return `<strong>${escapeHTML(display)}</strong>`;
+    return escapeHTML(display);
+  });
+  const total = scores.reduce((sum, x) => sum + (typeof x === 'number' ? x : 0), 0);
+  return `${parts.join(', ')}  |  <strong>${escapeHTML(String(total))}</strong>`;
+}
+
+function valueOrEmpty(v){ return (v === null || v === undefined) ? '' : String(v); }
+
+/* score input handlers */
+function onScoreInput(e){
+  const input = e.target;
+  const idx = Number(input.dataset.idx);
+  const round = Number(input.dataset.round);
+  const parsed = clampNumberString(input.value);
+  sheetCache.contestants[idx].scores[round] = parsed;
+  scheduleSave();
+  updateSubtitleForRow(idx);
+}
+function updateSubtitleForRow(idx){
+  const container = document.getElementById('listContainer');
+  if (!container) return;
+  const subtitleNodes = container.querySelectorAll('.subtitle');
+  if (subtitleNodes[idx]) subtitleNodes[idx].innerHTML = buildSubtitleSafe(sheetCache.contestants[idx].scores, selectedRound);
+}
+
+/* Enter key: move to next within selectedRound, wrap to first; if on latest round, check auto-advance */
+function onScoreKeyDown(e){
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const input = e.target;
+    const idx = Number(input.dataset.idx);
+    let next = (idx + 1) % sheetCache.contestants.length;
+    focusContestant(next, true);
+    const latestIndex = sheetCache.contestants[0].scores.length - 1;
+    if (selectedRound === latestIndex) maybeAutoAdvanceRound();
+  }
+}
+
+/* focus */
+function focusContestant(idx, forceFocus=false){
+  activeContestantIndex = idx;
+  const listContainer = document.getElementById('listContainer');
+  if (!listContainer) return;
+  Array.from(listContainer.querySelectorAll('.row')).forEach((row, rIdx)=>{
+    if (rIdx === idx) row.classList.add('active'); else row.classList.remove('active');
+  });
+  const input = listContainer.querySelector(`input[data-idx="${idx}"]`);
+  if (input && (forceFocus || document.activeElement !== input)) {
+    input.focus();
+    setTimeout(()=> input.setSelectionRange(input.value.length, input.value.length), 50);
+  }
+}
+
+/* auto-advance only when on latest round and all contestants have numeric value for that round */
+function maybeAutoAdvanceRound(){
+  const latest = sheetCache.contestants[0].scores.length - 1;
+  const allHave = sheetCache.contestants.every(c => typeof c.scores[latest] === 'number');
+  if (allHave) {
+    sheetCache.contestants.forEach(c => c.scores.push(null));
+    sheetCache.currentRoundIndex = sheetCache.contestants[0].scores.length - 1;
+    selectedRound = sheetCache.currentRoundIndex;
+    scheduleSave();
+    updateRoundDropdown();
+    renderContestantList();
+    focusContestant(0, true);
+  }
+}
+
+/* add round manually */
+function addRound(){
+  sheetCache.contestants.forEach(c => c.scores.push(null));
+  sheetCache.currentRoundIndex = sheetCache.contestants[0].scores.length - 1;
+  selectedRound = sheetCache.currentRoundIndex;
+  scheduleSave();
+  updateRoundDropdown();
+  renderContestantList();
+}
+
+/* delete round: remove selectedRound across all contestants; handle edge cases */
+function deleteRound(){
+  const rounds = sheetCache.contestants[0].scores.length;
+  if (rounds <= 1){
+    // reset to single round with nulls
+    sheetCache.contestants.forEach(c => c.scores = [null]);
+    selectedRound = 0;
+    sheetCache.currentRoundIndex = 0;
+    scheduleSave();
+    updateRoundDropdown();
+    renderContestantList();
+    return;
+  }
+  if (!confirm(`Delete Round ${selectedRound+1}? This will remove that round for everyone.`)) return;
+  sheetCache.contestants.forEach(c => {
+    c.scores.splice(selectedRound, 1);
+    // ensure at least one element
+    if (c.scores.length === 0) c.scores.push(null);
+  });
+  // shift selectedRound to previous if possible
+  selectedRound = Math.max(0, selectedRound - 1);
+  // also update currentRoundIndex to last index
+  sheetCache.currentRoundIndex = sheetCache.contestants[0].scores.length - 1;
+  scheduleSave();
+  updateRoundDropdown();
+  renderContestantList();
+}
+
+/* jump to latest round and focus first contestant without a score at that round */
+function jumpToLatest(){
+  const latest = sheetCache.contestants[0].scores.length - 1;
+  selectedRound = latest;
+  updateRoundDropdown();
+  // find first with null at that round
+  let idx = sheetCache.contestants.findIndex(c => c.scores[latest] === null || c.scores[latest] === undefined);
+  if (idx === -1) idx = 0;
+  renderContestantList();
+  focusContestant(idx, true);
+}
+
+/* Add contestant inline (enter to confirm) */
+function showAddContestantInline(){
+  const container = document.getElementById('listContainer');
+  const addRow = elt('div',{class:'card', style:'margin-top:8px;display:flex;gap:8px;align-items:center'}, [
+    elt('input',{type:'text', id:'newContestantName', placeholder:'New contestant name'}),
+    elt('button',{class:'btn', onclick:addContestantFromInline}, 'Add')
+  ]);
+  container.appendChild(addRow);
+  const input = document.getElementById('newContestantName');
+  input.focus();
+  input.addEventListener('keydown', (e)=> { if (e.key === 'Enter') { addContestantFromInline(); } });
+}
+function addContestantFromInline(){
+  const nameEl = document.getElementById('newContestantName');
+  if (!nameEl) return;
+  const name = nameEl.value.trim();
+  if (!name) return alert('Enter a name');
+  // set scores: pad zeros for previous rounds (all existing rounds)
+  const roundsCount = sheetCache.contestants[0]?.scores?.length || 1;
+  const scores = Array(roundsCount).fill(null);
+  const c = { id: uid('c'), name, scores };
+  sheetCache.contestants.push(c);
+  sheetCache.updatedAt = now();
+  scheduleSave();
+  renderContestantList();
+  focusContestant(sheetCache.contestants.length - 1, true);
+}
+
+/* schedule save (debounced) */
+function scheduleSave(){
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=> {
+    sheetCache.updatedAt = now();
+    dbPut(sheetCache);
+    loadState(); // refresh global lists
+  }, 300);
+}
+
+/* ============================
+   Contestant modal (edit name, edit all scores, delete)
+   ============================ */
+function openContestantModal(idx){
+  const c = sheetCache.contestants[idx];
+  showModal(renderContestantModal(c, idx));
+}
+function renderContestantModal(contestant, idx){
+  const modal = elt('div',{class:'modal'}, [
+    elt('h2',{}, 'Edit contestant'),
+    elt('label',{}, 'Name'),
+    elt('input',{type:'text', id:'modalName', value:contestant.name}),
+    elt('label',{}, 'Scores (edit values for each round)'),
+    elt('div',{style:'max-height:240px;overflow:auto;padding-right:8px'}, contestant.scores.map((s, i) => {
+      return elt('div',{style:'display:flex;gap:8px;align-items:center;margin-bottom:8px'}, [
+        elt('div',{}, `Round ${i+1}`),
+        elt('input',{type:'text', id:`modal-score-${i}`, value: (s === null || s === undefined) ? '' : String(s), placeholder:'—', style:'flex:1;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)'})
+      ]);
+    })),
+    elt('div',{style:'display:flex;justify-content:space-between;align-items:center;margin-top:12px'}, [
+      elt('div',{}, [
+        elt('button',{class:'delete-confirm', onclick:()=> handleDeleteContestant(idx)}, 'Delete')
+      ]),
+      elt('div',{}, [
+        elt('button',{class:'btn ghost', onclick:closeModal}, 'Cancel'),
+        elt('button',{class:'btn', style:'margin-left:8px', onclick:()=> saveContestantModal(idx)}, 'Save')
+      ])
+    ])
+  ]);
+  return modal;
+}
+
+function showModal(node){
+  modalRoot.innerHTML = '';
+  modalRoot.style.display = 'block';
+  const backdrop = elt('div',{class:'modal-backdrop'}, node);
+  modalRoot.appendChild(backdrop);
+}
+function closeModal(){ modalRoot.innerHTML = ''; modalRoot.style.display = 'none'; }
+
+function saveContestantModal(idx){
+  const name = document.getElementById('modalName').value.trim();
+  if (!name) return alert('Name cannot be empty');
+  const rounds = sheetCache.contestants[0].scores.length;
+  const newScores = [];
+  for (let i=0;i<rounds;i++){
+    const el = document.getElementById(`modal-score-${i}`);
+    const val = el ? clampNumberString(el.value) : null;
+    newScores.push(val);
+  }
+  sheetCache.contestants[idx].name = name;
+  sheetCache.contestants[idx].scores = newScores;
+  sheetCache.updatedAt = now();
+  scheduleSave();
+  closeModal();
+  renderContestantList();
+}
+
+function handleDeleteContestant(idx){
+  if (!confirm('Delete contestant? This cannot be undone.')) return;
+  sheetCache.contestants.splice(idx,1);
+  if (activeContestantIndex >= sheetCache.contestants.length) activeContestantIndex = 0;
+  scheduleSave();
+  closeModal();
+  renderContestantList();
+}
+
+/* ============================
+   Leaderboard
+   ============================ */
+
+
+async function renderLeader(){
+  // top buttons: Home + Scoresheet (📝)
+  const secondBtn = document.getElementById('secondBtn');
+  secondBtn.style.display = ''; secondBtn.title = 'Scoresheet';
+  secondBtn.innerText = '📝';
+  secondBtn.onclick = ()=> {
+    if (STATE.sheetId) navigateTo('sheet/' + STATE.sheetId);
+    else navigateTo('home');
+  };
+
+  document.getElementById('homeBtn').onclick = ()=> navigateTo('home');
+
+  main.innerHTML = ''; // clear to avoid duplicate render
+  const id = STATE.sheetId || sheetCache?.id;
+  if (!id) { main.appendChild(elt('div',{class:'card'}, [ elt('h1',{}, 'Leaderboards'), elt('div',{class:'muted'}, 'No sheet selected') ])); return; }
+  const sheet = await dbGet(id);
+  if (!sheet) { navigateTo('home'); return; }
+
+  main.appendChild(elt('div',{class:'card'}, [ elt('h1',{}, sheet.title + ' — Leaderboard'), elt('div',{class:'muted'}, `Rounds: ${sheet.contestants[0]?.scores?.length || 1}`) ]));
+
+  const t = document.createElement('table');
+  t.className = 'leaderboard';
+  const thead = t.createTHead();
+  const hrow = thead.insertRow();
+  hrow.appendChild(th('Name'));
+  const rounds = sheet.contestants[0]?.scores?.length || 1;
+  for (let r=0;r<rounds;r++) hrow.appendChild(th(`Round ${r+1}`));
+  hrow.appendChild(th('Total'));
+  const tbody = t.createTBody();
+  const rows = sheet.contestants.map(c=>{
+    const total = c.scores.reduce((s,x)=>s + (typeof x === 'number' ? x : 0), 0);
+    return { id:c.id, name:c.name, scores:c.scores.slice(), total };
+  });
+  rows.sort((a,b)=>b.total - a.total);
+  rows.forEach(rw=>{
+    const tr = tbody.insertRow();
+    tr.appendChild(td(rw.name));
+    for (let i=0;i<rounds;i++) tr.appendChild(tdNum(rw.scores[i]));
+    tr.appendChild(tdNum(rw.total));
+  });
+  main.appendChild(elt('div',{class:'card'}, [ t, elt('div',{style:'margin-top:8px'}, elt('button',{class:'btn ghost', onclick:()=> navigateTo('sheet/'+sheet.id)}, 'Back to Scoresheet')) ]));
+
+  function th(txt){ const el = document.createElement('th'); el.textContent = txt; return el; }
+  function td(txt){ const el = document.createElement('td'); el.textContent = (txt===null || txt===undefined) ? '—' : String(txt); return el; }
+  function tdNum(v){ const el = document.createElement('td'); el.className='numeric'; el.textContent = (v===null||v===undefined)?'—':String(v); return el; }
+}
+
+/* ============================
+   Misc helpers & init
+   ============================ */
+function elt(tag, attrs={}, children=null){
+  const el = document.createElement(tag);
+  for (let k in attrs){
+    if (k === 'onclick') el.addEventListener('click', attrs[k]);
+    else if (k === 'oninput') el.addEventListener('input', attrs[k]);
+    else if (k === 'onkeydown') el.addEventListener('keydown', attrs[k]);
+    else el.setAttribute(k, attrs[k]);
+  }
+  if (children === null) return el;
+  if (Array.isArray(children)){
+    children.forEach(c => {
+      if (typeof c === 'string') el.appendChild(document.createTextNode(c));
+      else el.appendChild(c);
+    });
+  } else {
+    if (typeof children === 'string') el.appendChild(document.createTextNode(children));
+    else el.appendChild(children);
+  }
+  return el;
+}
+
+(async function init(){
+  await loadState();
+  if (!location.hash) location.hash = '#home';
+  renderRoute();
+  // register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(()=>{/* ignore */});
+  }
+  // wire Home button globally
+  document.getElementById('homeBtn').onclick = ()=> navigateTo('home');
+})();
+</script>
+</body>
+</html>
