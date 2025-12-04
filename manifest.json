@@ -1,7 +1,7 @@
 {
-    "name": "Scorekeeper",
-    "short_name": "Scorekeeper",
-    "description": "Offline-first scoring app with persistent storage.",
+    "name": "Score-It!",
+    "short_name": "Score-It!",
+    "description": "Score anything - Even while offline!",
     "start_url": "./index.html",
     "scope": "./",
     "display": "standalone",
