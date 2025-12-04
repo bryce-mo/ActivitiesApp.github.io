@@ -22,15 +22,27 @@
   color-scheme: light;
 }
 html,body{height:100%;margin:0;background:linear-gradient(#f8f9fb,#f3f6fa);-webkit-font-smoothing:antialiased;}
-.app{max-width:820px;margin:25px auto;padding:14px;box-sizing:border-box;}
+.app{max-width:820px;margin:18px auto;padding:14px;box-sizing:border-box;}
 header.top-pill{
-  position:fixed;left:50%;transform:translateX(-50%);top:12px;
+  display:none;
+}
+/* Floating pill for navigation (bottom-left) */
+.bottom-left-pill{
+  position:fixed;left:12px;bottom:12px;
   background:linear-gradient(180deg, rgba(255,255,255,0.97), rgba(255,255,255,0.92));
   padding:8px 12px;border-radius:28px;display:flex;gap:8px;align-items:center;
   box-shadow:var(--shadow);z-index:600;border:1px solid rgba(0,0,0,0.04);
 }
-.icon-btn{width:42px;height:42px;border-radius:10px;background:transparent;border:0;display:grid;place-items:center;font-size:18px;color:var(--accent);cursor:pointer}
-.icon-btn.secondary{color:var(--accent-2)}
+/* Floating pill for jumpToLatest (bottom-right) */
+.bottom-right-pill{
+  position:fixed;right:12px;bottom:12px;
+  background:var(--accent);
+  color: #fff;
+  padding:8px 12px;border-radius:28px;display:flex;gap:8px;align-items:center;justify-content:center;
+  box-shadow:var(--shadow);z-index:600;border:1px solid rgba(0,0,0,0.04);
+  width:42px;height:42px;
+}
+.icon-btn{width:42px;height:42px;border-radius:10px;background:transparent;border:0;display:grid;place-items:center;font-size:18px;cursor:pointer;color:inherit}
 h1{font-size:20px;margin:10px 0 6px 0;color:#0f1724}
 .card{background:var(--card);border-radius:var(--radius);padding:14px;margin:12px 0;box-shadow:var(--shadow);border:1px solid rgba(0,0,0,0.03)}
 .home-actions{display:flex;gap:10px;flex-wrap:wrap}
@@ -51,7 +63,7 @@ label{display:block;margin:10px 0 6px 0;font-weight:600;color:#0f1724}
 .score-input{width:100%;padding:8px 4px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);font-size:16px;text-align:center}
 .list{display:flex;flex-direction:column;gap:8px}
 .add-row{display:flex;gap:8px;margin-top:10px}
-.small{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--pill);border:0;-webkit-appearance:none;appearance:none;cursor:pointer}
+.small{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--pill);border:0;-webkit-appearance:none;appearance:none;cursor:pointer;color:#0f1724;-webkit-text-fill-color:#0f1724;-webkit-tap-highlight-color: transparent}
 
 
 #roundSelect {
@@ -153,6 +165,17 @@ label{display:block;margin:10px 0 6px 0;font-weight:600;color:#0f1724}
 
   <main id="main"></main>
 
+  <!-- Bottom-left navigation pill -->
+  <div class="bottom-left-pill" id="bottomLeftPill">
+    <button class="icon-btn" id="homeBtn2" title="Home">🏠</button>
+    <button class="icon-btn" id="secondBtn2" title="Secondary">📁</button>
+  </div>
+
+  <!-- Bottom-right jumpToLatest pill -->
+  <div class="bottom-right-pill" id="bottomRightPill" style="display:none;">
+    <button class="icon-btn" id="jumpBtn" title="Jump to Latest" style="font-size:24px;">⇥</button>
+  </div>
+
   <div class="footer-space"></div>
 </div>
 
@@ -245,15 +268,40 @@ async function renderRoute(){
   STATE.route = 'home'; renderHome();
 }
 
+/* Update bottom-left navigation pill based on current route */
+function updateBottomLeftPill(){
+  const homeBtn2 = document.getElementById('homeBtn2');
+  const secondBtn2 = document.getElementById('secondBtn2');
+  // Home button ALWAYS shows
+  homeBtn2.style.display = '';
+  homeBtn2.onclick = ()=> navigateTo('home');
+  
+  if (STATE.route === 'home') {
+    secondBtn2.style.display = ''; secondBtn2.title = 'Archived Sheets'; secondBtn2.innerText = '🗄️';
+    secondBtn2.onclick = ()=> navigateTo('archive');
+  } else if (STATE.route === 'archive') {
+    secondBtn2.style.display = 'none';
+  } else if (STATE.route === 'sheet') {
+    secondBtn2.style.display = ''; secondBtn2.title = 'Leaderboard'; secondBtn2.innerText = '📊';
+    secondBtn2.onclick = ()=> navigateTo('leaderboard/' + STATE.sheetId);
+  } else if (STATE.route === 'leader') {
+    secondBtn2.style.display = ''; secondBtn2.title = 'Scoresheet'; secondBtn2.innerText = '📝';
+    secondBtn2.onclick = ()=> { if (STATE.sheetId) navigateTo('sheet/' + STATE.sheetId); else navigateTo('home'); };
+  } else if (STATE.route === 'new') {
+    secondBtn2.style.display = 'none';
+  } else {
+    secondBtn2.style.display = 'none';
+  }
+}
+
 /* ============================
    Home view
    ============================ */
 function renderHome(){
-  // top pill second button -> Archive (show)
-  const secondBtn = document.getElementById('secondBtn');
-  secondBtn.style.display = ''; secondBtn.title = 'Archived Sheets';
-  secondBtn.innerText = '🗄️';
-  secondBtn.onclick = ()=> navigateTo('archive');
+  // Hide bottom-right pill on home
+  const bottomRightPill = document.getElementById('bottomRightPill');
+  bottomRightPill.style.display = 'none';
+  updateBottomLeftPill();
 
   main.innerHTML = '';
   const el = elt('div',{class:'card'}, [
@@ -326,9 +374,10 @@ async function deleteArchivedSheet(id){
    Archive view
    ============================ */
 function renderArchive(){
-  // top pill: only Home visible (hide secondBtn)
-  const secondBtn = document.getElementById('secondBtn');
-  secondBtn.style.display = 'none';
+  // Hide bottom-right pill on archive
+  const bottomRightPill = document.getElementById('bottomRightPill');
+  bottomRightPill.style.display = 'none';
+  updateBottomLeftPill();
 
   main.innerHTML = '';
   main.appendChild(elt('div',{class:'card'}, [ elt('h1',{}, 'Archived Scoresheets'), elt('div',{class:'muted'}, 'Archived sheets are read-only. Restore to make edits.') ]));
@@ -447,9 +496,10 @@ function handleArchiveDeleteClick(e,id){
    New sheet view
    ============================ */
 function renderNew(){
-  // second button -> Home
-  const secondBtn = document.getElementById('secondBtn');
-  secondBtn.style.display = 'none';
+  // Hide bottom-right pill on new
+  const bottomRightPill = document.getElementById('bottomRightPill');
+  bottomRightPill.style.display = 'none';
+  updateBottomLeftPill();
 
   main.innerHTML = '';
   const el = elt('div',{class:'card'}, [
@@ -494,6 +544,13 @@ let activeContestantIndex = 0;
 let selectedRound = 0;
 
 async function renderSheet(id){
+  // Show bottom-right pill (jumpToLatest) only on sheet view
+  const bottomRightPill = document.getElementById('bottomRightPill');
+  bottomRightPill.style.display = '';
+  const jumpBtn = document.getElementById('jumpBtn');
+  jumpBtn.onclick = ()=> jumpToLatest();
+  updateBottomLeftPill();
+
   // top pill second button -> leaderboard (show)
   const secondBtn = document.getElementById('secondBtn');
   secondBtn.style.display = ''; secondBtn.title = 'Leaderboard';
@@ -526,8 +583,7 @@ async function renderSheet(id){
     ]),
     elt('div',{style:'display:flex;align-items:center;gap:8px'}, [
       renderRoundDropdown(),
-      elt('button',{class:'small', onclick:addRound}, 'New Round'),
-      elt('button',{class:'btn', style:'font-size: 20px; padding: 4.5px 9px', onclick:jumpToLatest}, '⇥'),
+      elt('button',{class:'small', onclick:addRound}, 'New Round')
     ])
   ]);
 
@@ -808,12 +864,25 @@ function deleteRound(){
 }
 
 /* jump to latest round and focus first contestant without a score at that round */
+/* also auto-advance the round if all contestants have filled the current round */
 function jumpToLatest(){
-  const latest = sheetCache.contestants[0].scores.length - 1;
-  selectedRound = latest;
+  const latestIndex = sheetCache.contestants[0].scores.length - 1;
+  const allFilled = sheetCache.contestants.every(c => typeof c.scores[latestIndex] === 'number');
+  
+  // If current latest round is complete, auto-advance to next round
+  if (allFilled) {
+    sheetCache.contestants.forEach(c => c.scores.push(null));
+    sheetCache.currentRoundIndex = sheetCache.contestants[0].scores.length - 1;
+    selectedRound = sheetCache.currentRoundIndex;
+    scheduleSave();
+    updateRoundDropdown();
+  }
+  
+  // Now jump to latest and find first empty
+  const currentLatest = sheetCache.contestants[0].scores.length - 1;
+  selectedRound = currentLatest;
   updateRoundDropdown();
-  // find first with null at that round
-  let idx = sheetCache.contestants.findIndex(c => c.scores[latest] === null || c.scores[latest] === undefined);
+  let idx = sheetCache.contestants.findIndex(c => c.scores[currentLatest] === null || c.scores[currentLatest] === undefined);
   if (idx === -1) idx = 0;
   renderContestantList();
   focusContestant(idx, true);
@@ -930,14 +999,10 @@ function handleDeleteContestant(idx){
 
 
 async function renderLeader(){
-  // top buttons: Home + Scoresheet (📝)
-  const secondBtn = document.getElementById('secondBtn');
-  secondBtn.style.display = ''; secondBtn.title = 'Scoresheet';
-  secondBtn.innerText = '📝';
-  secondBtn.onclick = ()=> {
-    if (STATE.sheetId) navigateTo('sheet/' + STATE.sheetId);
-    else navigateTo('home');
-  };
+  // Hide bottom-right pill on leaderboard
+  const bottomRightPill = document.getElementById('bottomRightPill');
+  bottomRightPill.style.display = 'none';
+  updateBottomLeftPill();
 
   document.getElementById('homeBtn').onclick = ()=> navigateTo('home');
 
