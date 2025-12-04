@@ -22,7 +22,7 @@
   color-scheme: light;
 }
 html,body{height:100%;margin:0;background:linear-gradient(#f8f9fb,#f3f6fa);-webkit-font-smoothing:antialiased;}
-.app{max-width:820px;margin:18px auto;padding:14px;box-sizing:border-box;}
+.app{max-width:820px;margin:25px auto;padding:14px;box-sizing:border-box;}
 header.top-pill{
   position:fixed;left:50%;transform:translateX(-50%);top:12px;
   background:linear-gradient(180deg, rgba(255,255,255,0.97), rgba(255,255,255,0.92));
@@ -37,8 +37,8 @@ h1{font-size:20px;margin:10px 0 6px 0;color:#0f1724}
 .btn{background:var(--accent);color:white;padding:10px 14px;border-radius:8px;border:0;cursor:pointer;font-weight:600}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(0,52,147,0.12)}
 .muted{color:var(--muted);font-size:14px}
-textarea {width:100%;min-height:120px;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);resize:vertical;font-size:15px}
-input[type="text"], input[type="number"]{padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);font-size:15px}
+textarea {width:100%;min-height:120px;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);resize:vertical;font-size:16px}
+input[type="text"], input[type="number"]{padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);font-size:16px}
 label{display:block;margin:10px 0 6px 0;font-weight:600;color:#0f1724}
 
 /* Scoresheet list */
@@ -48,7 +48,7 @@ label{display:block;margin:10px 0 6px 0;font-weight:600;color:#0f1724}
 .name{font-weight:700;font-size:16px;color:#081227}
 .subtitle{font-size:13px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:auto}
 .right{width:120px}
-.score-input{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);font-size:15px;text-align:center}
+.score-input{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);font-size:16px;text-align:center}
 .list{display:flex;flex-direction:column;gap:8px}
 .add-row{display:flex;gap:8px;margin-top:10px}
 .small{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--pill);border:0}
@@ -629,12 +629,49 @@ function renderContestantList(){
     input.placeholder = '—';
     input.addEventListener('keydown', onScoreKeyDown);
     input.addEventListener('input', onScoreInput);
+    // Track which contestant input was last focused so the tab-sentinel knows
+    // which contestant to advance from when it receives focus (useful on iOS numeric keyboards).
+    input.addEventListener('focus', () => { activeContestantIndex = idx; });
     right.appendChild(input);
     // assemble
     row.appendChild(left); row.appendChild(right);
     rowWrap.appendChild(row);
     container.appendChild(rowWrap);
   });
+
+  // Add a hidden "tab sentinel" input at the end of the list. On devices
+  // (notably iOS numeric keyboard) where the numeric keyboard doesn't provide
+  // a visible Enter/Return, tabbing to this sentinel should emulate pressing
+  // Enter: move focus to the next contestant and trigger auto-advance when
+  // on the latest round.
+  (function ensureTabSentinel(){
+    let sentinel = document.getElementById('tabSentinel');
+    if (!sentinel){
+      sentinel = document.createElement('input');
+      sentinel.type = 'text';
+      sentinel.id = 'tabSentinel';
+      // Keep it visually minimal but focusable.
+      sentinel.style.opacity = '0';
+      sentinel.style.height = '1px';
+      sentinel.style.width = '1px';
+      sentinel.style.border = '0';
+      sentinel.style.padding = '0';
+      sentinel.style.margin = '0';
+      sentinel.style.background = 'transparent';
+      sentinel.style.position = 'relative';
+      // When focused, behave like Enter on the currently active contestant.
+      sentinel.addEventListener('focus', () => {
+        // Fallback if no active index known
+        const idx = (typeof activeContestantIndex === 'number' && activeContestantIndex >= 0) ? activeContestantIndex : 0;
+        const next = (idx + 1) % sheetCache.contestants.length;
+        focusContestant(next, true);
+        const latestIndex = (sheetCache.contestants[0] && sheetCache.contestants[0].scores) ? sheetCache.contestants[0].scores.length - 1 : 0;
+        if (selectedRound === latestIndex) maybeAutoAdvanceRound();
+      });
+    }
+    // Ensure sentinel is last in the container so Tab order reaches it after score inputs.
+    container.appendChild(sentinel);
+  })();
 }
 
 /* subtitle builder that returns HTML string (escape contents, wrap active with <strong>) */
@@ -896,7 +933,7 @@ async function renderLeader(){
   const hrow = thead.insertRow();
   hrow.appendChild(th('Name'));
   const rounds = sheet.contestants[0]?.scores?.length || 1;
-  for (let r=0;r<rounds;r++) hrow.appendChild(th(`Round ${r+1}`));
+  for (let r=0;r<rounds;r++) hrow.appendChild(th(`R${r+1}`));
   hrow.appendChild(th('Total'));
   const tbody = t.createTBody();
   const rows = sheet.contestants.map(c=>{
