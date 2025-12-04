@@ -30,7 +30,7 @@ header.top-pill{
 .bottom-left-pill{
   position:fixed;left:25px;bottom:25px;
   background:linear-gradient(180deg, rgba(255,255,255,0.97), rgba(255,255,255,0.92));
-  padding:8px 12px;border-radius:28px;display:flex;gap:8px;align-items:center;
+  padding:8px 12px;border-radius:30px;display:flex;gap:8px;align-items:center;
   box-shadow:var(--shadow);z-index:600;border:1px solid rgba(0,0,0,0.04);
 }
 /* Floating pill for jumpToLatest (bottom-right) */
@@ -38,7 +38,7 @@ header.top-pill{
   position:fixed;right:25px;bottom:25px;
   background:var(--accent);
   color: #fff;
-  padding:8px 12px;border-radius:28px;display:flex;gap:8px;align-items:center;justify-content:center;
+  padding:8px 8px;border-radius:30px;display:flex;gap:8px;align-items:center;justify-content:center;
   box-shadow:var(--shadow);z-index:600;border:1px solid rgba(0,0,0,0.04);
   width:42px;height:42px;
 }
@@ -176,6 +176,16 @@ label{display:block;margin:10px 0 6px 0;font-weight:600;color:#0f1724}
     <button class="icon-btn" id="jumpBtn" title="Jump to Latest" style="font-size:24px;">⇥</button>
   </div>
 
+  <!-- Home-only bottom-right plus pill (matches jumpBtn style) -->
+  <div class="bottom-right-pill" id="homePlusPill" style="display:none;">
+    <button class="icon-btn" id="homePlusBtn" title="New Scoresheet" style="font-size:24px;" aria-label="New Scoresheet">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+  </div>
+
   <div class="footer-space"></div>
 </div>
 
@@ -189,6 +199,21 @@ label{display:block;margin:10px 0 6px 0;font-weight:600;color:#0f1724}
 const DB_NAME = 'scorekeeper-db';
 const DB_VER = 1;
 const STORE = 'sheets';
+
+/* ============================
+   Draft storage for New Scoresheet
+   ============================ */
+const DRAFT_KEY = 'scorekeeper-draft';
+function saveDraft(title, names){
+  localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, names }));
+}
+function loadDraft(){
+  const draft = localStorage.getItem(DRAFT_KEY);
+  return draft ? JSON.parse(draft) : null;
+}
+function clearDraft(){
+  localStorage.removeItem(DRAFT_KEY);
+}
 
 function openDb(){
   return new Promise((res, rej) => {
@@ -303,9 +328,17 @@ function renderHome(){
   bottomRightPill.style.display = 'none';
   updateBottomLeftPill();
 
+  // Show the home-only plus pill and wire it to create a new scoresheet
+  const homePlus = document.getElementById('homePlusPill');
+  if (homePlus) {
+    homePlus.style.display = '';
+    const hpBtn = document.getElementById('homePlusBtn');
+    if (hpBtn) hpBtn.onclick = () => navigateTo('new');
+  }
+
   main.innerHTML = '';
-  const el = elt('div',{class:'card'}, [
-    elt('div',{}, [ elt('h1',{}, 'Bryce\'s Scorekeeper'), elt('div',{class:'muted'}, 'Keep score of anything! Click \'New Scoresheet\' to get started.') ]),
+    const el = elt('div',{class:'card'}, [
+      elt('div',{}, [ elt('h1',{}, [ elt('em',{}, 'Score-It!'), ' by Bryce' ]), elt('div',{class:'muted'}, 'Keep score of anything! Click \'New Scoresheet\' to get started.') ]),
     elt('div',{class:'home-actions', style:'margin-top:12px'}, [
       elt('button',{class:'btn', onclick:()=> navigateTo('new')}, 'New Scoresheet')
     ])
@@ -387,6 +420,10 @@ function renderArchive(){
   const bottomRightPill = document.getElementById('bottomRightPill');
   bottomRightPill.style.display = 'none';
   updateBottomLeftPill();
+
+  // Ensure the home-only plus pill is hidden on archive view
+  const homePlusHide = document.getElementById('homePlusPill');
+  if (homePlusHide) homePlusHide.style.display = 'none';
 
   main.innerHTML = '';
   main.appendChild(elt('div',{class:'card'}, [ elt('h1',{}, 'Archived Scoresheets'), elt('div',{class:'muted'}, 'Archived sheets are read-only. Restore to make edits.') ]));
@@ -504,26 +541,64 @@ function handleArchiveDeleteClick(e,id){
 /* ============================
    New sheet view
    ============================ */
+let draftSaveTimer = null;
+function saveDraftDebounced(title, names){
+  if (draftSaveTimer) clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(() => {
+    saveDraft(title, names);
+  }, 300);
+}
 function renderNew(){
   // Hide bottom-right pill on new
   const bottomRightPill = document.getElementById('bottomRightPill');
   bottomRightPill.style.display = 'none';
   updateBottomLeftPill();
 
+  // Hide the home-only plus pill on the new sheet view
+  const homePlusHide = document.getElementById('homePlusPill');
+  if (homePlusHide) homePlusHide.style.display = 'none';
+
   main.innerHTML = '';
+  // Load draft if it exists
+  const draft = loadDraft();
   const el = elt('div',{class:'card'}, [
     elt('h1',{}, 'New Scoresheet'),
     elt('label',{}, 'Title'),
-    elt('input',{type:'text', id:'sheetTitle', placeholder:'Name (optional)'}),
+    elt('input',{type:'text', id:'sheetTitle', placeholder:'Title (optional)', value: draft?.title || ''}),
     elt('label',{}, 'Names (one per line)'),
-    elt('textarea',{id:'namesInput', placeholder:'Bryce\nMatthew\nHollie'}),
-    elt('div',{style:'display:flex;gap:8px;margin-top:10px;align-items:center'}, [
-      elt('button',{class:'btn', onclick:startNewSheet}, 'Start Scoring'),
-      elt('button',{class:'btn ghost', onclick:()=> navigateTo('home')}, 'Cancel')
+    elt('textarea',{id:'namesInput', placeholder:'Bryce\nMatthew\nHollie'}, draft?.names || ''),
+    elt('div',{style:'display:flex;gap:8px;margin-top:10px;align-items:center;justify-content:space-between'}, [
+      elt('div',{style:'display: flex; gap: 8px;'}, [
+        elt('button',{class:'btn', onclick:startNewSheet}, 'Start Scoring'),
+        elt('button',{class:'btn ghost', onclick:()=> navigateTo('home')}, 'Cancel')
+      ]),
+      elt('button',{class:'btn ghost', style:'color:var(--accent-2)', 'data-confirm':'no', onclick:(e)=> handleClearDraft(e)}, 'Clear')
     ])
   ]);
   main.appendChild(el);
-  document.getElementById('sheetTitle').focus();
+  // Attach auto-save listeners to both inputs
+  const titleInput = document.getElementById('sheetTitle');
+  const namesInput = document.getElementById('namesInput');
+  titleInput.addEventListener('input', () => {
+    saveDraftDebounced(titleInput.value, namesInput.value);
+  });
+  namesInput.addEventListener('input', () => {
+    saveDraftDebounced(titleInput.value, namesInput.value);
+  });
+  titleInput.focus();
+}
+function handleClearDraft(e){
+  const btn = e.currentTarget;
+  if (btn.dataset.confirm === 'no'){
+    btn.dataset.confirm = 'yes'; btn.innerText = 'Confirm Clear?';
+    setTimeout(()=>{ if (btn) { btn.dataset.confirm = 'no'; btn.innerText = 'Clear'; } }, 3000);
+  } else {
+    // confirmed: clear the draft and the input fields
+    clearDraft();
+    document.getElementById('sheetTitle').value = '';
+    document.getElementById('namesInput').value = '';
+    document.getElementById('sheetTitle').focus();
+  }
 }
 async function startNewSheet(){
   const t = document.getElementById('sheetTitle').value.trim() || 'Untitled';
@@ -540,6 +615,7 @@ async function startNewSheet(){
     contestants: namesRaw.map(n=>({ id: uid('c'), name: n, scores: Array(initialRounds).fill(null) }))
   };
   await dbPut(sheet);
+  clearDraft();
   navigateTo('sheet/'+sheet.id);
   await loadState();
 }
@@ -559,6 +635,10 @@ async function renderSheet(id){
   const jumpBtn = document.getElementById('jumpBtn');
   jumpBtn.onclick = ()=> jumpToLatest();
   updateBottomLeftPill();
+
+  // Ensure the home-only plus pill is hidden on sheet view
+  const homePlusHide = document.getElementById('homePlusPill');
+  if (homePlusHide) homePlusHide.style.display = 'none';
 
   // top pill second button -> leaderboard (show)
   const secondBtn = document.getElementById('secondBtn');
@@ -1013,6 +1093,10 @@ async function renderLeader(){
   bottomRightPill.style.display = 'none';
   updateBottomLeftPill();
 
+  // Ensure the home-only plus pill is hidden on leaderboard view
+  const homePlusHide = document.getElementById('homePlusPill');
+  if (homePlusHide) homePlusHide.style.display = 'none';
+
   document.getElementById('homeBtn').onclick = ()=> navigateTo('home');
 
   main.innerHTML = ''; // clear to avoid duplicate render
@@ -1044,7 +1128,7 @@ async function renderLeader(){
     tr.appendChild(tdNum(rw.total));
   });
   // Card with leaderboard table
-  main.appendChild(elt('div',{class:'card'}, [ t ]));
+  main.appendChild(elt('div',{class:'card', style:'overflow:auto'}, [ t ]));
 
   // Place the "Back to Scoresheet" button below the card, matching the
   // placement used by the scoresheet view (+ Add Contestant). Left aligned.
