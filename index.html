@@ -56,11 +56,12 @@ label{display:block;margin:10px 0 6px 0;font-weight:600;color:#0f1724}
 /* Scoresheet list */
 .row{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;}
 .row:not(.active){opacity:0.62}
+.active{background: #eee;}
 .left{flex:1}
 .name{font-weight:700;font-size:16px;color:#081227}
 .subtitle{font-size:13px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:auto}
 .right{width:100px}
-.score-input{width:100%;padding:8px 4px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);font-size:16px;text-align:center}
+.score-input{width:90px;padding:8px 4px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);font-size:16px;text-align:center}
 .list{display:flex;flex-direction:column;gap:8px}
 .add-row{display:flex;gap:8px;margin-top:10px}
 .small{font-size:13px;padding:8px 10px;border-radius:8px;background:var(--pill);border:0;-webkit-appearance:none;appearance:none;cursor:pointer;color:#0f1724;-webkit-text-fill-color:#0f1724;-webkit-tap-highlight-color: transparent}
@@ -798,7 +799,14 @@ function renderContestantList(){
     input.addEventListener('input', onScoreInput);
     // Track which contestant input was last focused so the tab-sentinel knows
     // which contestant to advance from when it receives focus (useful on iOS numeric keyboards).
-    input.addEventListener('focus', () => { activeContestantIndex = idx; });
+    // Also update row styling when focused or blurred
+    input.addEventListener('focus', () => {
+      activeContestantIndex = idx;
+      updateActiveRowStyling();
+    });
+    input.addEventListener('blur', () => {
+      updateActiveRowStyling();
+    });
     right.appendChild(input);
     // assemble
     row.appendChild(left); row.appendChild(right);
@@ -853,6 +861,20 @@ function buildSubtitleSafe(scores, activeIdx){
 }
 
 function valueOrEmpty(v){ return (v === null || v === undefined) ? '' : String(v); }
+
+/* Update active row styling based on which input has focus */
+function updateActiveRowStyling(){
+  const listContainer = document.getElementById('listContainer');
+  if (!listContainer) return;
+  const rows = Array.from(listContainer.querySelectorAll('.row'));
+  rows.forEach((row, rIdx) => {
+    if (rIdx === activeContestantIndex) {
+      row.classList.add('active');
+    } else {
+      row.classList.remove('active');
+    }
+  });
+}
 
 /* score input handlers */
 function onScoreInput(e){
