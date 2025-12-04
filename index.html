@@ -305,7 +305,7 @@ function renderHome(){
 
   main.innerHTML = '';
   const el = elt('div',{class:'card'}, [
-    elt('div',{}, [ elt('h1',{}, 'Scorekeeper'), elt('div',{class:'muted'}, 'Create and manage multiple active scoresheets. Works offline once installed.') ]),
+    elt('div',{}, [ elt('h1',{}, 'Bryce\'s Scorekeeper'), elt('div',{class:'muted'}, 'Keep score of anything! Click \'New Scoresheet\' to get started.') ]),
     elt('div',{class:'home-actions', style:'margin-top:12px'}, [
       elt('button',{class:'btn', onclick:()=> navigateTo('new')}, 'New Scoresheet')
     ])
@@ -321,6 +321,15 @@ function renderHome(){
   main.appendChild(activeCard);
 
   renderActiveList();
+
+  // Add footer with "Made by Bryce" on home page only
+  const footerDiv = elt('div',{style:'margin-top:20px;display:flex;justify-content:flex-end;padding:0 14px'}, []);
+  const footerText = document.createElement('div');
+  footerText.className = 'muted';
+  footerText.style.fontSize = '13px';
+  footerText.innerHTML = 'Made by <a href="https://instagram.com/bryceonboard" target="_blank" style="color:inherit;text-decoration:underline">Bryce</a> ♡';
+  footerDiv.appendChild(footerText);
+  main.appendChild(footerDiv);
 }
 
 function renderActiveList(){
