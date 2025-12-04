@@ -49,7 +49,7 @@ h1{font-size:20px;margin:10px 0 6px 0;color:#0f1724}
 .btn{background:var(--accent);color:white;padding:10px 14px;border-radius:8px;border:0;cursor:pointer;font-weight:600}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(0,52,147,0.12)}
 .muted{color:var(--muted);font-size:14px}
-textarea {width:100%;min-height:120px;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);resize:vertical;font-size:16px}
+textarea {width:100%;box-sizing:border-box;min-height:120px;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);resize:vertical;font-size:16px}
 input[type="text"], input[type="number"]{padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);font-size:16px}
 label{display:block;margin:10px 0 6px 0;font-weight:600;color:#0f1724}
 
@@ -514,9 +514,9 @@ function renderNew(){
   const el = elt('div',{class:'card'}, [
     elt('h1',{}, 'New Scoresheet'),
     elt('label',{}, 'Title'),
-    elt('input',{type:'text', id:'sheetTitle', placeholder:'Name this scoresheet (optional)'}),
+    elt('input',{type:'text', id:'sheetTitle', placeholder:'Name (optional)'}),
     elt('label',{}, 'Names (one per line)'),
-    elt('textarea',{id:'namesInput', placeholder:'Bryce\nAlice\nSam'}),
+    elt('textarea',{id:'namesInput', placeholder:'Bryce\nMatthew\nHollie'}),
     elt('div',{style:'display:flex;gap:8px;margin-top:10px;align-items:center'}, [
       elt('button',{class:'btn', onclick:startNewSheet}, 'Start Scoring'),
       elt('button',{class:'btn ghost', onclick:()=> navigateTo('home')}, 'Cancel')
