@@ -356,10 +356,30 @@ function renderArchive(){
 main.appendChild(elt('div', { class: 'card' }, [
   elt('div', { style: 'display: flex; justify-content: space-between; align-items: center;' }, [
     elt('h1', {}, 'Reset Memory & Cache'),
-    elt('button', {
-      class: 'btn ghost',
-      style: 'color: var(--accent-2);',
-      onclick: () => {
+    elt('div', { style: 'display: flex; gap: 8px;' }, [
+      elt('button', {
+        class: 'btn ghost',
+        style: 'color: var(--accent);',
+        onclick: async () => {
+          try {
+            // Unregister all service workers
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let reg of registrations) {
+              await reg.unregister();
+            }
+            console.log('Service workers unregistered. Reloading...');
+            // Hard reload to bypass cache and fetch latest code
+            window.location.reload(true);
+          } catch (err) {
+            console.error('Error updating:', err);
+            alert('Update failed. Please try refreshing manually (Cmd+Shift+R on Mac).');
+          }
+        }
+      }, 'Update'),
+      elt('button', {
+        class: 'btn ghost',
+        style: 'color: var(--accent-2);',
+        onclick: () => {
         if (confirm('⚠️ Are you sure you want to reset EVERYTHING? This will clear all scores, settings, local memory, and caches.')) {
           
           // --- 1. CLEAR BROWSER STORAGE (localStorage & sessionStorage) ---
@@ -405,8 +425,9 @@ main.appendChild(elt('div', { class: 'card' }, [
             }
           }
         } // end if(confirm)
-      }
-    }, 'Reset')
+        }
+      }, 'Reset')
+    ])
   ])
 ]));
 }
